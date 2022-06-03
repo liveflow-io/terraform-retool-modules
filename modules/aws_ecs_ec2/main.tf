@@ -37,7 +37,7 @@ data "aws_ami" "this" {
 }
 
 resource "aws_launch_configuration" "this" {
-  name          = "${var.deployment_name}-ecs-launch-configuration"
+  name_prefix   = var.deployment_name
   image_id      = data.aws_ami.this.id
   instance_type = var.instance_type # e.g. t2.medium
 
@@ -72,7 +72,7 @@ resource "aws_launch_configuration" "this" {
 }
 
 resource "aws_autoscaling_group" "this" {
-  name                 = "${var.deployment_name}-autoscaling-group"
+  name_prefix          = var.deployment_name
   max_size             = var.max_instance_count
   min_size             = var.min_instance_count
   desired_capacity     = var.min_instance_count
