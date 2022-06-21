@@ -107,14 +107,13 @@ resource "aws_autoscaling_group" "this" {
     value               = "${var.deployment_name}-ec2-instance"
     propagate_at_launch = true
   }
-  
+
 }
 
 # Attach an autoscaling policy to the spot cluster to target 70% MemoryReservation on the ECS cluster.
 resource "aws_autoscaling_policy" "this" {
   name                   = "${var.deployment_name}-ecs-scale-policy"
   policy_type            = "TargetTrackingScaling"
-  adjustment_type        = "ChangeInCapacity"
   autoscaling_group_name = aws_autoscaling_group.this.name
 
   target_tracking_configuration {
