@@ -37,7 +37,7 @@ data "aws_ami" "this" {
 }
 
 resource "aws_launch_configuration" "this" {
-  name_prefix   = var.deployment_name
+  name_prefix   = "${var.deployment_name}-ecs-launch-configuration-"
   image_id      = data.aws_ami.this.id
   instance_type = var.instance_type # e.g. t2.medium
 
@@ -108,6 +108,9 @@ resource "aws_autoscaling_group" "this" {
     propagate_at_launch = true
   }
 
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Attach an autoscaling policy to the spot cluster to target 70% MemoryReservation on the ECS cluster.
@@ -149,7 +152,7 @@ resource "aws_db_instance" "this" {
   instance_class               = var.rds_instance_class
   engine                       = "postgres"
   engine_version               = var.rds_engine_version
-  name                         = "hammerhead_production"
+  db_name                      = "hammerhead_production"
   username                     = aws_secretsmanager_secret_version.rds_username.secret_string
   password                     = aws_secretsmanager_secret_version.rds_password.secret_string
   port                         = 5432
@@ -184,7 +187,7 @@ resource "aws_ecs_service" "jobs_runner" {
   task_definition = aws_ecs_task_definition.retool_jobs_runner.arn
 }
 resource "aws_ecs_task_definition" "retool_jobs_runner" {
-  family        = "retool"
+  family        = "retool-jobs-runner"
   task_role_arn = aws_iam_role.task_role.arn
   container_definitions = jsonencode(
     [

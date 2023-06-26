@@ -8,14 +8,6 @@ output "ecs_alb_arn" {
   description = "Retool ALB arn"
 }
 
-output "ecs_alb_target_group_arn" {
-  value = aws_lb_target_group.this.arn
-}
-
-output "ecs_alb_zone_id" {
-  value = aws_lb.this.zone_id
-}
-
 output "ecs_cluster_name" {
   value       = aws_ecs_cluster.this.name
   description = "Name of AWS ECS Cluster"
@@ -49,9 +41,4 @@ output "rds_instance_arn" {
 output "rds_instance_name" {
   value       = aws_db_instance.this.db_name
   description = "Name of RDS instance"
-}
-
-output "ec2_security_group_id" {
-  value       = aws_security_group.ec2.id
-  description = "ID of EC2 security group"
 }
