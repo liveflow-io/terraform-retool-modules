@@ -75,10 +75,6 @@ resource "aws_autoscaling_group" "this" {
     "OldestInstance"
   ]
 
-  lifecycle {
-    create_before_destroy = true
-  }
-
   tag {
     key                 = "AmazonECSManaged"
     value               = ""
