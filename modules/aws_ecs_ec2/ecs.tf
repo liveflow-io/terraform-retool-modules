@@ -7,20 +7,6 @@ resource "aws_ecs_cluster" "this" {
   }
 }
 
-# Fargate capacity provider
-resource "aws_ecs_cluster_capacity_providers" "this" {
-  cluster_name = aws_ecs_cluster.this.name
-
-  capacity_providers = var.launch_type == "FARGATE" ? ["FARGATE"] : [aws_ecs_capacity_provider.this[0].name]
-
-  default_capacity_provider_strategy {
-    base              = 1
-    weight            = 100
-    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
-  }
-}
-
-# Required setup for EC2 instances (if not using Fargate)
 data "aws_ami" "this" {
   most_recent = true # get the latest version
   name_regex  = "^amzn2-ami-ecs-hvm-\\d\\.\\d\\.\\d{8}-x86_64-ebs$"
@@ -44,7 +30,7 @@ resource "aws_launch_configuration" "this" {
   instance_type = var.instance_type # e.g. t2.medium
 
   enable_monitoring           = true
-  associate_public_ip_address = true
+  associate_public_ip_address = var.associate_public_ip_address
 
   # This user data represents a collection of “scripts” that will be executed the first time the machine starts.
   # This specific example makes sure the EC2 instance is automatically attached to the ECS cluster that we create earlier
@@ -56,7 +42,7 @@ resource "aws_launch_configuration" "this" {
 
   # We’ll see security groups later
   security_groups = [
-    aws_security_group.containers.id
+    aws_security_group.ec2.id
   ]
 
   # If you want to SSH into the instance and manage it directly:
@@ -66,7 +52,7 @@ resource "aws_launch_configuration" "this" {
   key_name = var.ssh_key_name
 
   # Allow the EC2 instances to access AWS resources on your behalf, using this instance profile and the permissions defined there
-  iam_instance_profile = aws_iam_instance_profile.ec2[0].arn
+  iam_instance_profile = aws_iam_instance_profile.ec2.arn
 
   lifecycle {
     create_before_destroy = true
@@ -88,6 +74,10 @@ resource "aws_autoscaling_group" "this" {
   termination_policies = [
     "OldestInstance"
   ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tag {
     key                 = "AmazonECSManaged"
@@ -137,7 +127,6 @@ resource "aws_autoscaling_policy" "this" {
 resource "aws_ecs_capacity_provider" "this" {
   count = var.launch_type == "EC2" ? 1 : 0
   name  = "${var.deployment_name}-ecs-capacity-provider"
-
   auto_scaling_group_provider {
     auto_scaling_group_arn = aws_autoscaling_group.this[0].arn
   }

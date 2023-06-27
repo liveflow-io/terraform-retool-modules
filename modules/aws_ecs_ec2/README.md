@@ -18,6 +18,7 @@ module "retool" {
     ]
     ssh_key_name = "<your-key-pair>"
     ecs_retool_image = "<desired-retool-version>"
+    workflows_enabled = true
 
     # Additional configuration
     ...
@@ -27,6 +28,7 @@ module "retool" {
 2. Run `terraform init` to install all requirements for the module.
 
 3. Replace `ecs_retool_image` with your desired [Retool Version](https://docs.retool.com/docs/updating-retool-on-premise#retool-release-versions). The format should be `tryretool/backend:X.Y.Z`, where `X.Y.Z` is your desired version number.
+Version 2.111 or greater is needed for Workflows (2.117 or later strongly recommended for performance improvements).
 
 4. Ensure that the default security settings in `security.tf` matches your specifications. If you need to tighten down access, pass in custom ingress and egress rules into `ec2_egress_rules`, `ec2_ingress_rules`, `alb_egress_rules`, and `alb_ingress_rules`.
 
@@ -49,7 +51,8 @@ To configure the EC instance size, set the `instance_type` input variable (e.g. 
 To configure the RDS instance class, set the `instance_class` input variable (e.g. `db.m6g.large`).
 
 ## Advanced Configuration
-
+**Bring your own Temporal Cluster**
+To configure your own Temporal cluster, set the `use_existing_temporal_cluster` to `true` and configure your Temporal Cluster's Frontend service endpoint (and TLS if needed) using `temporal_cluster_config`. If configuring mTLS, we expect the cert and key values to be base64-encoded strings.
 ### Security Groups
 
 To customize the ingress and egress rules on the security groups, you can override specific input variable defaults.

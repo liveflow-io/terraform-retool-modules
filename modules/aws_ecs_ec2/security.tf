@@ -28,6 +28,20 @@ resource "aws_security_group" "rds" {
   }
 }
 
+resource "aws_security_group" "temporal_aurora" {
+  count       = var.workflows_enabled ? 1 : 0
+  name        = "${var.deployment_name}-temporal-rds-security-group"
+  description = "Retool database security group"
+
+  ingress {
+    description = "Retool Temporal ECS Postgres Inbound"
+    from_port   = "5432"
+    to_port     = "5432"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_security_group" "alb" {
   name        = "${var.deployment_name}-alb-security-group"
   description = "Retool load balancer security group"

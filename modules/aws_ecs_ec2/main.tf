@@ -2,143 +2,13 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.50, <= 4.12.0"
+      version = "~> 4.0"
     }
   }
 }
 
 provider "aws" {
   region = var.aws_region
-}
-
-resource "aws_ecs_cluster" "this" {
-  name = "${var.deployment_name}-ecs"
-
-  setting {
-    name  = "containerInsights"
-    value = var.ecs_insights_enabled
-  }
-}
-
-data "aws_ami" "this" {
-  most_recent = true # get the latest version
-  name_regex  = "^amzn2-ami-ecs-hvm-\\d\\.\\d\\.\\d{8}-x86_64-ebs$"
-
-  filter {
-    name = "virtualization-type"
-    values = [
-      "hvm"
-    ]
-  }
-
-  owners = [
-    "amazon" # only official images
-  ]
-}
-
-resource "aws_launch_configuration" "this" {
-  name_prefix   = "${var.deployment_name}-ecs-launch-configuration-"
-  image_id      = data.aws_ami.this.id
-  instance_type = var.instance_type # e.g. t2.medium
-
-  enable_monitoring           = true
-  associate_public_ip_address = var.associate_public_ip_address
-
-  # This user data represents a collection of “scripts” that will be executed the first time the machine starts.
-  # This specific example makes sure the EC2 instance is automatically attached to the ECS cluster that we create earlier
-  # and marks the instance as purchased through the Spot pricing
-  user_data = <<-EOF
-  #!/bin/bash
-  echo ECS_CLUSTER=${var.deployment_name}-ecs >> /etc/ecs/ecs.config
-  EOF
-
-  # We’ll see security groups later
-  security_groups = [
-    aws_security_group.ec2.id
-  ]
-
-  # If you want to SSH into the instance and manage it directly:
-  # 1. Make sure this key exists in the AWS EC2 dashboard
-  # 2. Make sure your local SSH agent has it loaded
-  # 3. Make sure the EC2 instances are launched within a public subnet (are accessible from the internet)
-  key_name = var.ssh_key_name
-
-  # Allow the EC2 instances to access AWS resources on your behalf, using this instance profile and the permissions defined there
-  iam_instance_profile = aws_iam_instance_profile.ec2.arn
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_autoscaling_group" "this" {
-  name_prefix          = var.deployment_name
-  max_size             = var.max_instance_count
-  min_size             = var.min_instance_count
-  desired_capacity     = var.min_instance_count
-  vpc_zone_identifier  = var.subnet_ids
-  launch_configuration = aws_launch_configuration.this.name
-
-  default_cooldown          = 30
-  health_check_grace_period = 30
-
-  termination_policies = [
-    "OldestInstance"
-  ]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tag {
-    key                 = "AmazonECSManaged"
-    value               = ""
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "Cluster"
-    value               = "${var.deployment_name}-ecs"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "Name"
-    value               = "${var.deployment_name}-ec2-instance"
-    propagate_at_launch = true
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Attach an autoscaling policy to the spot cluster to target 70% MemoryReservation on the ECS cluster.
-resource "aws_autoscaling_policy" "this" {
-  name                   = "${var.deployment_name}-ecs-scale-policy"
-  policy_type            = "TargetTrackingScaling"
-  autoscaling_group_name = aws_autoscaling_group.this.name
-
-  target_tracking_configuration {
-    customized_metric_specification {
-      metric_dimension {
-        name  = "ClusterName"
-        value = "${var.deployment_name}-ecs"
-      }
-      metric_name = "MemoryReservation"
-      namespace   = "AWS/ECS"
-      statistic   = "Average"
-    }
-    target_value = var.autoscaling_memory_reservation_target
-  }
-}
-
-resource "aws_ecs_capacity_provider" "this" {
-  name = "${var.deployment_name}-ecs-capacity-provider"
-
-  auto_scaling_group_provider {
-    auto_scaling_group_arn = aws_autoscaling_group.this.arn
-  }
 }
 
 resource "aws_cloudwatch_log_group" "this" {
@@ -186,6 +56,26 @@ resource "aws_ecs_service" "jobs_runner" {
   desired_count   = 1
   task_definition = aws_ecs_task_definition.retool_jobs_runner.arn
 }
+
+resource "aws_ecs_service" "workflows_backend" {
+  count           = var.workflows_enabled ? 1 : 0
+  name            = "${var.deployment_name}-workflows-backend-service"
+  cluster         = aws_ecs_cluster.this.id
+  desired_count   = 1
+  task_definition = aws_ecs_task_definition.retool_workflows_backend[0].arn
+
+  service_registries {
+    registry_arn = aws_service_discovery_service.retool_workflow_backend_service[0].arn
+  }
+
+resource "aws_ecs_service" "workflows_worker" {
+  count           = var.workflows_enabled ? 1 : 0
+  name            = "${var.deployment_name}-workflows-worker-service"
+  cluster         = aws_ecs_cluster.this.id
+  desired_count   = 1
+  task_definition = aws_ecs_task_definition.retool_workflows_worker[0].arn
+
+
 resource "aws_ecs_task_definition" "retool_jobs_runner" {
   family        = "retool-jobs-runner"
   task_role_arn = aws_iam_role.task_role.arn
@@ -195,8 +85,8 @@ resource "aws_ecs_task_definition" "retool_jobs_runner" {
         name      = "retool-jobs-runner"
         essential = true
         image     = var.ecs_retool_image
-        cpu       = var.ecs_task_cpu
-        memory    = var.ecs_task_memory
+        cpu       = var.ecs_task_resource_map["jobs_runner"]["cpu"]
+        memory    = var.ecs_task_resource_map["jobs_runner"]["memory"]
         command = [
           "./docker_scripts/start_api.sh"
         ]
@@ -240,8 +130,8 @@ resource "aws_ecs_task_definition" "retool" {
         name      = "retool"
         essential = true
         image     = var.ecs_retool_image
-        cpu       = var.ecs_task_cpu
-        memory    = var.ecs_task_memory
+        cpu       = var.ecs_task_resource_map["main"]["cpu"]
+        memory    = var.ecs_task_resource_map["main"]["memory"]
         command = [
           "./docker_scripts/start_api.sh"
         ]
@@ -279,4 +169,152 @@ resource "aws_ecs_task_definition" "retool" {
       }
     ]
   )
+}
+
+resource "aws_ecs_task_definition" "retool_workflows_backend" {
+  count                    = var.workflows_enabled ? 1 : 0
+  family                   = "retool-workflows-backend"
+  task_role_arn            = aws_iam_role.task_role.arn
+  container_definitions = jsonencode(
+    [
+      {
+        name      = "retool-workflows-backend"
+        essential = true
+        image     = var.ecs_retool_image
+        cpu       = var.ecs_task_resource_map["workflows_backend"]["cpu"]
+        memory    = var.ecs_task_resource_map["workflows_backend"]["memory"]
+        command = [
+          "./docker_scripts/start_api.sh"
+        ]
+
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-group         = aws_cloudwatch_log_group.this.id
+            awslogs-region        = var.aws_region
+            awslogs-stream-prefix = "SERVICE_RETOOL"
+          }
+        }
+
+        portMappings = [
+          {
+            containerPort = 3000
+            hostPort      = 3000
+            protocol      = "tcp"
+          }
+        ]
+
+        environment = concat(
+          local.environment_variables,
+          [
+            {
+              name  = "SERVICE_TYPE"
+              value = "WORKFLOW_BACKEND,DB_CONNECTOR,DB_SSH_CONNECTOR"
+            },
+            {
+              "name"  = "COOKIE_INSECURE",
+              "value" = tostring(var.cookie_insecure)
+            }
+          ]
+        )
+      }
+    ]
+  )
+}
+resource "aws_ecs_task_definition" "retool_workflows_worker" {
+  count                    = var.workflows_enabled ? 1 : 0
+  family                   = "retool-workflows-worker"
+  task_role_arn            = aws_iam_role.task_role.arn
+  container_definitions = jsonencode(
+    [
+      {
+        name      = "retool-workflows-worker"
+        essential = true
+        image     = var.ecs_retool_image
+        cpu       = var.ecs_task_resource_map["workflows_worker"]["cpu"]
+        memory    = var.ecs_task_resource_map["workflows_worker"]["memory"]
+        command = [
+          "./docker_scripts/start_api.sh"
+        ]
+
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            awslogs-group         = aws_cloudwatch_log_group.this.id
+            awslogs-region        = var.aws_region
+            awslogs-stream-prefix = "SERVICE_RETOOL"
+          }
+        }
+
+        health_check = {
+          command = ["CMD-SHELL", "curl http://localhost/api/checkHealth:3005 || exit 1"]
+        }
+
+        portMappings = [
+          {
+            containerPort = 3005
+            hostPort      = 3005
+            protocol      = "tcp"
+          }
+        ]
+
+        environment = concat(
+          local.environment_variables,
+          [
+            {
+              name  = "SERVICE_TYPE"
+              value = "WORKFLOW_TEMPORAL_WORKER"
+            },
+            {
+              "name"  = "COOKIE_INSECURE",
+              "value" = tostring(var.cookie_insecure)
+            }
+          ]
+        )
+      }
+    ]
+  )
+}
+
+resource "aws_service_discovery_private_dns_namespace" "retoolsvc" {
+  count       = var.workflows_enabled ? 1 : 0
+  name        = "retoolsvc"
+  description = "Service Discovery namespace for Retool deployment"
+  vpc         = var.vpc_id
+}
+
+resource "aws_service_discovery_service" "retool_workflow_backend_service" {
+  count = var.workflows_enabled ? 1 : 0
+  name  = "workflow-backend"
+
+  dns_config {
+    namespace_id = aws_service_discovery_private_dns_namespace.retoolsvc[0].id
+
+    dns_records {
+      ttl  = 60
+      type = "A"
+    }
+
+    routing_policy = "MULTIVALUE"
+  }
+
+  health_check_custom_config {
+    failure_threshold = 1
+  }
+}
+
+module "temporal" {
+  count  = var.workflows_enabled && !var.use_exising_temporal_cluster ? 1 : 0
+  source = "./temporal"
+
+  deployment_name                = "${var.deployment_name}-temporal"
+  vpc_id                         = var.vpc_id
+  subnet_ids                     = var.subnet_ids
+  private_dns_namespace_id       = aws_service_discovery_private_dns_namespace.retoolsvc[0].id
+  aws_cloudwatch_log_group_id    = aws_cloudwatch_log_group.this.id
+  aws_region                     = var.aws_region
+  aws_ecs_cluster_id             = aws_ecs_cluster.this.id
+  launch_type                    = "EC2"
+  container_sg_id                = aws_security_group.ec2.id
+  aws_ecs_capacity_provider_name = aws_ecs_capacity_provider.this[0].name
 }
