@@ -57,8 +57,8 @@ variable "retool_license_key" {
 
 variable "ecs_retool_image" {
   type        = string
-  description = "Container image for desired Retool version. Defaults to `2.106.2`"
-  default     = "tryretool/backend:2.106.2"
+  description = "Container image for desired Retool version. Defaults to `2.123.7`"
+  default     = "tryretool/backend:2.123.7"
 }
 
 variable "associate_public_ip_address" {
@@ -67,18 +67,31 @@ variable "associate_public_ip_address" {
   description = "Whether to associate a public IP address with an instance in a VPC. Defaults to true."
 }
 
-variable "ecs_task_cpu" {
-  type        = number
-  default     = 1024
-  description = "Amount of CPU provisioned for each task. Defaults to 1024."
+variable "ecs_task_resource_map" {
+  type = map(object({
+    cpu    = number
+    memory = number
+  }))
+  default = {
+    main = {
+      cpu    = 2048
+      memory = 4096
+    },
+    jobs_runner = {
+      cpu    = 1024
+      memory = 2048
+    },
+    workflows_backend = {
+      cpu    = 2048
+      memory = 4096
+    }
+    workflows_worker = {
+      cpu    = 2048
+      memory = 4096
+    }
+  }
+  description = "Amount of CPU and Memory provisioned for each task."
 }
-
-variable "ecs_task_memory" {
-  type        = number
-  default     = 2048
-  description = "Amount of memory provisioned for each task. Defaults to 2048."
-}
-
 variable "force_deployment" {
   type        = string
   default     = false
@@ -130,6 +143,78 @@ variable "rds_performance_insights_retention_period" {
   type        = number
   default     = 14
   description = "The time in days to retain Performance Insights for RDS. Defaults to 14."
+}
+
+variable "use_exising_temporal_cluster" {
+  type        = bool
+  default     = false
+  description = "Whether to use an already existing Temporal Cluster. Defaults to false. Set to true and set temporal_cluster_config if you already have a Temporal cluster you want to use with Retool."
+}
+
+variable "launch_type" {
+  type    = string
+  default = "FARGATE"
+
+  validation {
+    condition     = contains(["FARGATE", "EC2"], var.launch_type)
+    error_message = "launch_type must be either \"FARGATE\" or \"EC2\""
+  }
+}
+
+# namescape: temporal namespace to use for Retool Workflows. We recommend this is only used by Retool.
+# If use_existing_temporal_cluster == true this should be config for currently existing cluster. 
+# If use_existing_temporal_cluster == false, you should use the defaults.
+# host: hostname for Temporal Frontend service
+# port: port for Temporal Frontend service
+# tls_enabled: Whether to use tls when connecting to Temporal Frontend. For mTLS, configure tls_crt and tls_key.
+# tls_crt: For mTLS only. Base64 encoded string of public tls certificate
+# tls_key: For mTLS only. Base64 encoded string of private tls key
+variable "temporal_cluster_config" {
+  type = object({
+    namespace   = string
+    host        = string
+    port        = string
+    tls_enabled = bool
+    tls_crt     = optional(string)
+    tls_key     = optional(string)
+  })
+
+  default = {
+    namespace   = "workflows"
+    host        = "temporal.retoolsvc"
+    port        = "7233"
+    tls_enabled = false
+  }
+}
+
+variable "temporal_aurora_username" {
+  type        = string
+  default     = "retool"
+  description = "Master username for the Temporal Aurora instance. Defaults to Retool."
+}
+
+variable "temporal_aurora_publicly_accessible" {
+  type        = bool
+  default     = false
+  description = "Whether the Temporal Aurora instance should be publicly accessible. Defaults to false."
+}
+
+variable "temporal_aurora_performance_insights_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to enable Performance Insights for Temporal Aurora. Defaults to true."
+}
+
+variable "temporal_aurora_performance_insights_retention_period" {
+  type        = number
+  default     = 14
+  description = "The time in days to retain Performance Insights for Temporal Aurora. Defaults to 14."
+}
+
+variable "workflows_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether to enable Workflows-specific containers, services, etc.. Defaults to false."
 }
 
 variable "log_retention_in_days" {
@@ -184,6 +269,12 @@ variable "additional_env_vars" {
   type        = list(map(string))
   default     = []
   description = "Additional environment variables (e.g. BASE_DOMAIN)"
+}
+
+variable "additional_temporal_env_vars" {
+  type        = list(map(string))
+  default     = []
+  description = "Additional environment variables for Temporal containers (e.g. DYNAMIC_CONFIG_PATH)"
 }
 
 variable "rds_ingress_rules" {
