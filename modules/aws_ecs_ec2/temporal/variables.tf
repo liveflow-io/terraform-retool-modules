@@ -70,7 +70,7 @@ variable "launch_type" {
 
   validation {
     condition     = contains(["FARGATE", "EC2"], var.launch_type)
-    error_message = "The launch_type variable must be either \"FARGATE\" or \"EC2\""
+    error_message = "The launch_type variable must be either \"FARGATE\" or \"EC2\"."
   }
 }
 
