@@ -75,7 +75,7 @@ resource "aws_ecs_service" "workflows_worker" {
   cluster         = aws_ecs_cluster.this.id
   desired_count   = 1
   task_definition = aws_ecs_task_definition.retool_workflows_worker[0].arn
-
+}
 
 resource "aws_ecs_task_definition" "retool_jobs_runner" {
   family        = "retool-jobs-runner"
@@ -173,9 +173,9 @@ resource "aws_ecs_task_definition" "retool" {
 }
 
 resource "aws_ecs_task_definition" "retool_workflows_backend" {
-  count                    = var.workflows_enabled ? 1 : 0
-  family                   = "retool-workflows-backend"
-  task_role_arn            = aws_iam_role.task_role.arn
+  count         = var.workflows_enabled ? 1 : 0
+  family        = "retool-workflows-backend"
+  task_role_arn = aws_iam_role.task_role.arn
   container_definitions = jsonencode(
     [
       {
@@ -223,9 +223,9 @@ resource "aws_ecs_task_definition" "retool_workflows_backend" {
   )
 }
 resource "aws_ecs_task_definition" "retool_workflows_worker" {
-  count                    = var.workflows_enabled ? 1 : 0
-  family                   = "retool-workflows-worker"
-  task_role_arn            = aws_iam_role.task_role.arn
+  count         = var.workflows_enabled ? 1 : 0
+  family        = "retool-workflows-worker"
+  task_role_arn = aws_iam_role.task_role.arn
   container_definitions = jsonencode(
     [
       {
