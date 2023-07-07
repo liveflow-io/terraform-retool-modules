@@ -5,6 +5,7 @@ terraform {
       version = ">= 4.12.0"
     }
   }
+  experiments = [module_variable_optional_attrs]
 }
 
 provider "aws" {
