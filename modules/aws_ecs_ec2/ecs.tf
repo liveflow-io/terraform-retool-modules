@@ -66,7 +66,7 @@ resource "aws_launch_configuration" "this" {
   key_name = var.ssh_key_name
 
   # Allow the EC2 instances to access AWS resources on your behalf, using this instance profile and the permissions defined there
-  iam_instance_profile = aws_iam_instance_profile.ec2.arn
+  iam_instance_profile = aws_iam_instance_profile.ec2[0].arn
 
   lifecycle {
     create_before_destroy = true
