@@ -112,7 +112,9 @@ resource "aws_ecs_service" "workflows_backend" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.retool_workflow_backend_service[0].arn
+    registry_arn   = aws_service_discovery_service.retool_workflow_backend_service[0].arn
+    container_name = "retool-workflows-backend"
+    container_port = 3000
   }
 
   dynamic "network_configuration" {
