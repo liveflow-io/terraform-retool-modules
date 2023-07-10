@@ -48,6 +48,25 @@ resource "aws_ecs_service" "retool" {
     container_name   = "retool"
     container_port   = 3000
   }
+
+  # Need to explictly set this in aws_ecs_service to avoid destructive behavior: https://github.com/hashicorp/terraform-provider-aws/issues/22823
+  capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
+  }
+
+  dynamic "network_configuration" {
+    for_each = var.launch_type == "FARGATE" ? toset([1]) : toset([])
+
+    content {
+      subnets = var.subnet_ids
+      security_groups = [
+        aws_security_group.containers.id
+      ]
+      assign_public_ip = true
+    }
+  }
 }
 
 resource "aws_ecs_service" "jobs_runner" {
@@ -55,6 +74,27 @@ resource "aws_ecs_service" "jobs_runner" {
   cluster         = aws_ecs_cluster.this.id
   desired_count   = 1
   task_definition = aws_ecs_task_definition.retool_jobs_runner.arn
+
+  # Need to explictly set this in aws_ecs_service to avoid destructive behavior: https://github.com/hashicorp/terraform-provider-aws/issues/22823
+  capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
+  }
+
+  dynamic "network_configuration" {
+
+    for_each = var.launch_type == "FARGATE" ? toset([1]) : toset([])
+
+    content {
+      subnets = var.subnet_ids
+      security_groups = [
+        aws_security_group.containers.id
+      ]
+      assign_public_ip = true
+    }
+  }
+
 }
 
 resource "aws_ecs_service" "workflows_backend" {
@@ -64,9 +104,30 @@ resource "aws_ecs_service" "workflows_backend" {
   desired_count   = 1
   task_definition = aws_ecs_task_definition.retool_workflows_backend[0].arn
 
+  # Need to explictly set this in aws_ecs_service to avoid destructive behavior: https://github.com/hashicorp/terraform-provider-aws/issues/22823
+  capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
+  }
+
   service_registries {
     registry_arn = aws_service_discovery_service.retool_workflow_backend_service[0].arn
   }
+
+  dynamic "network_configuration" {
+
+    for_each = var.launch_type == "FARGATE" ? toset([1]) : toset([])
+
+    content {
+      subnets = var.subnet_ids
+      security_groups = [
+        aws_security_group.containers.id
+      ]
+      assign_public_ip = true
+    }
+  }
+
 }
 
 resource "aws_ecs_service" "workflows_worker" {
@@ -75,6 +136,26 @@ resource "aws_ecs_service" "workflows_worker" {
   cluster         = aws_ecs_cluster.this.id
   desired_count   = 1
   task_definition = aws_ecs_task_definition.retool_workflows_worker[0].arn
+
+  # Need to explictly set this in aws_ecs_service to avoid destructive behavior: https://github.com/hashicorp/terraform-provider-aws/issues/22823
+  capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
+  }
+  dynamic "network_configuration" {
+
+    for_each = var.launch_type == "FARGATE" ? toset([1]) : toset([])
+
+    content {
+      subnets = var.subnet_ids
+      security_groups = [
+        aws_security_group.containers.id
+      ]
+      assign_public_ip = true
+    }
+  }
+
 }
 
 resource "aws_ecs_task_definition" "retool_jobs_runner" {

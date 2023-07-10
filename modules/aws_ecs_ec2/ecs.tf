@@ -7,6 +7,20 @@ resource "aws_ecs_cluster" "this" {
   }
 }
 
+# Fargate capacity provider
+resource "aws_ecs_cluster_capacity_providers" "this" {
+  cluster_name = aws_ecs_cluster.this.name
+
+  capacity_providers = var.launch_type == "FARGATE" ? ["FARGATE"] : [aws_ecs_capacity_provider.this[0].name]
+
+  default_capacity_provider_strategy {
+    base              = 1
+    weight            = 100
+    capacity_provider = var.launch_type == "FARGATE" ? "FARGATE" : aws_ecs_capacity_provider.this[0].name
+  }
+}
+
+# Required setup for EC2 instances (if not using Fargate)
 data "aws_ami" "this" {
   most_recent = true # get the latest version
   name_regex  = "^amzn2-ami-ecs-hvm-\\d\\.\\d\\.\\d{8}-x86_64-ebs$"
