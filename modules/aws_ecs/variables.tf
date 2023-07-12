@@ -308,16 +308,18 @@ variable "container_ingress_rules" {
       protocol                     = string
       cidr_block                   = optional(string)
       ipv6_cidr_block              = optional(string)
+      security_groups              = list(string)
       referenced_security_group_id = optional(string)
     })
   )
   default = {
     first = {
-      description = "Global HTTP inbound ipv4"
-      from_port   = "80"
-      to_port     = "3000"
-      protocol    = "tcp"
-      cidr_block  = "0.0.0.0/0"
+      description     = "Global HTTP inbound ipv4"
+      from_port       = "80"
+      to_port         = "3000"
+      protocol        = "tcp"
+      cidr_block      = "0.0.0.0/0"
+      security_groups = null
     },
     second = {
       description     = "Global HTTP inbound ipv6"
@@ -325,13 +327,15 @@ variable "container_ingress_rules" {
       to_port         = "3000"
       protocol        = "tcp"
       ipv6_cidr_block = "::/0"
+      security_groups = null
     },
     third = {
-      description = "Global HTTPS inbound ipv4"
-      from_port   = "443"
-      to_port     = "3000"
-      protocol    = "tcp"
-      cidr_block  = "0.0.0.0/0"
+      description     = "Global HTTPS inbound ipv4"
+      from_port       = "443"
+      to_port         = "3000"
+      protocol        = "tcp"
+      cidr_block      = "0.0.0.0/0"
+      security_groups = null
     },
     fourth = {
       description     = "Global HTTPS inbound ipv4"
@@ -339,13 +343,15 @@ variable "container_ingress_rules" {
       to_port         = "3000"
       protocol        = "tcp"
       ipv6_cidr_block = "::/0"
+      security_groups = null
     },
     fifth = {
-      description = "SSH inbound ipv4"
-      from_port   = "22"
-      to_port     = "22"
-      protocol    = "tcp"
-      cidr_block  = "0.0.0.0/0"
+      description     = "SSH inbound ipv4"
+      from_port       = "22"
+      to_port         = "22"
+      protocol        = "tcp"
+      cidr_block      = "0.0.0.0/0"
+      security_groups = null
     },
     sixth = {
       description     = "SSH inbound ipv6"
@@ -353,6 +359,7 @@ variable "container_ingress_rules" {
       to_port         = "22"
       protocol        = "tcp"
       ipv6_cidr_block = "::/0"
+      security_groups = null
     }
   }
   description = "Ingress rules for EC2 instances in autoscaling group or ECS services in Fargate"
@@ -393,6 +400,7 @@ variable "alb_ingress_rules" {
       protocol         = string
       cidr_blocks      = list(string)
       ipv6_cidr_blocks = list(string)
+      security_groups  = list(string)
     })
   )
   default = [
@@ -403,6 +411,7 @@ variable "alb_ingress_rules" {
       protocol         = "tcp"
       cidr_blocks      = ["0.0.0.0/0"]
       ipv6_cidr_blocks = ["::/0"]
+      security_groups  = null
     }
   ]
   description = "Ingress rules for load balancer"
