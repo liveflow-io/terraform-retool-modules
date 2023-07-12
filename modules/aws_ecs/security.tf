@@ -56,6 +56,7 @@ resource "aws_security_group" "alb" {
       protocol         = ingress.value["protocol"]
       cidr_blocks      = ingress.value["cidr_blocks"]
       ipv6_cidr_blocks = ingress.value["ipv6_cidr_blocks"]
+      security_groups  = ingress.value["security_groups"]
     }
   }
 
