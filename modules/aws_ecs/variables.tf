@@ -105,6 +105,11 @@ variable "ecs_insights_enabled" {
   description = "Whether or not to enable ECS Container Insights. Defaults to `enabled`"
 }
 
+variable "rds_engine_version" {
+  type    = string
+  default = "12.11"
+}
+
 variable "rds_username" {
   type        = string
   default     = "retool"
