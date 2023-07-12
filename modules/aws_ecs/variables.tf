@@ -129,6 +129,12 @@ variable "rds_performance_insights_retention_period" {
   description = "The time in days to retain Performance Insights for RDS. Defaults to 14."
 }
 
+variable "rds_subnet_group_name" {
+  type        = string
+  description = "RDS instance will be created in the VPC associated with the subnet group"
+  default     = null
+}
+
 variable "use_exising_temporal_cluster" {
   type        = bool
   default     = false
