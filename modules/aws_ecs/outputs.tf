@@ -23,6 +23,11 @@ output "ecs_cluster_id" {
   description = "ID of AWS ECS Cluster"
 }
 
+output "ecs_security_group_id" {
+  value       = aws_security_group.containers.id
+  description = "ID of EC2 security group"
+}
+
 output "rds_instance_id" {
   value       = aws_db_instance.this.id
   description = "ID of AWS RDS instance"
