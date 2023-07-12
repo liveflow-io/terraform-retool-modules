@@ -345,22 +345,22 @@ variable "container_ingress_rules" {
       ipv6_cidr_block = "::/0"
       security_groups = null
     },
-    fifth = {
-      description     = "SSH inbound ipv4"
-      from_port       = "22"
-      to_port         = "22"
-      protocol        = "tcp"
-      cidr_block      = "0.0.0.0/0"
-      security_groups = null
-    },
-    sixth = {
-      description     = "SSH inbound ipv6"
-      from_port       = "22"
-      to_port         = "22"
-      protocol        = "tcp"
-      ipv6_cidr_block = "::/0"
-      security_groups = null
-    }
+    # fifth = {
+    #   description     = "SSH inbound ipv4"
+    #   from_port       = "22"
+    #   to_port         = "22"
+    #   protocol        = "tcp"
+    #   cidr_block      = "0.0.0.0/0"
+    #   security_groups = null
+    # },
+    # sixth = {
+    #   description     = "SSH inbound ipv6"
+    #   from_port       = "22"
+    #   to_port         = "22"
+    #   protocol        = "tcp"
+    #   ipv6_cidr_block = "::/0"
+    #   security_groups = null
+    # }
   }
   description = "Ingress rules for EC2 instances in autoscaling group or ECS services in Fargate"
 }
