@@ -141,6 +141,32 @@ variable "rds_subnet_group_name" {
   default     = null
 }
 
+variable "rds_ingress_rules" {
+  type = list(
+    object({
+      description      = string
+      from_port        = string
+      to_port          = string
+      protocol         = string
+      cidr_blocks      = list(string)
+      ipv6_cidr_blocks = list(string)
+      security_groups  = list(string)
+    })
+  )
+  default = [
+    {
+      description      = "Retool ECS Postgres Inbound"
+      from_port        = "5432"
+      to_port          = "5432"
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]
+      security_groups  = null
+      ipv6_cidr_blocks = null
+    },
+  ]
+  description = "Ingress rules for RDS"
+}
+
 variable "use_exising_temporal_cluster" {
   type        = bool
   default     = false
