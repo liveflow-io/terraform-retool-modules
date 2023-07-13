@@ -78,9 +78,10 @@ resource "aws_ecs_service" "retool_temporal" {
   dynamic "service_registries" {
     for_each = each.key == "frontend" ? toset([1]) : toset([])
     content {
-      registry_arn   = aws_service_discovery_service.temporal_frontend_service.arn
-      container_name = "${var.deployment_name}-${each.key}"
-      container_port = each.value["request_port"]
+      registry_arn = aws_service_discovery_service.temporal_frontend_service.arn
+      # not compatible with FARGATE
+      # container_name = "${var.deployment_name}-${each.key}"
+      # container_port = each.value["request_port"]
     }
   }
 
