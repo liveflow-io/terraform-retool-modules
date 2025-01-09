@@ -238,6 +238,12 @@ variable "temporal_aurora_performance_insights_retention_period" {
   description = "The time in days to retain Performance Insights for Temporal Aurora. Defaults to 14."
 }
 
+variable "temporal_rds_engine_version" {
+  type        = string
+  default     = "14.9"
+  description = "Engine version for Temporal RDS. Defaults to 14.9"
+}
+
 variable "workflows_enabled" {
   type        = bool
   default     = false

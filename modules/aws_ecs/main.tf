@@ -416,4 +416,5 @@ module "temporal" {
   launch_type                    = var.launch_type
   container_sg_id                = aws_security_group.containers.id
   aws_ecs_capacity_provider_name = var.launch_type == "EC2" ? aws_ecs_capacity_provider.this[0].name : null
+  rds_engine_version             = var.temporal_rds_engine_version
 }
