@@ -74,6 +74,12 @@ variable "launch_type" {
   }
 }
 
+variable "rds_engine_version" {
+  type        = string
+  default     = "14.9"
+  description = "Engine version for Temporal RDS. Defaults to 14.9"
+}
+
 variable "temporal_aurora_username" {
   type        = string
   default     = "retool"
