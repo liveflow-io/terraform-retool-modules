@@ -16,6 +16,17 @@ resource "aws_cloudwatch_log_group" "this" {
   retention_in_days = var.log_retention_in_days
 }
 
+resource "aws_db_parameter_group" "aurora_postgres" {
+  family = "aurora-postgresql${replace(var.rds_engine_version, ".", "")}"
+  name   = "${var.deployment_name}-aurora-postgres-params"
+
+  parameter {
+    name         = "max_connections"
+    value        = tostring(var.rds_max_connections)
+    apply_method = "pending-reboot"
+  }
+}
+
 resource "aws_db_instance" "this" {
   identifier                   = "${var.deployment_name}-rds-instance"
   allocated_storage            = 80
@@ -30,6 +41,7 @@ resource "aws_db_instance" "this" {
   vpc_security_group_ids       = [aws_security_group.rds.id]
   performance_insights_enabled = var.rds_performance_insights_enabled
   db_subnet_group_name         = var.rds_subnet_group_name
+  parameter_group_name         = aws_db_parameter_group.aurora_postgres.name
 
   skip_final_snapshot = true
   apply_immediately   = true
