@@ -452,3 +452,14 @@ variable "alb_egress_rules" {
   ]
   description = "Egress rules for load balancer"
 }
+
+variable "rds_max_connections" {
+  type        = number
+  default     = 3000
+  description = "Maximum number of database connections allowed. If not specified, defaults to 3000. Must be between 1 and 5000."
+
+  validation {
+    condition     = var.rds_max_connections >= 1 && var.rds_max_connections <= 5000
+    error_message = "RDS max_connections must be between 1 and 5000."
+  }
+}
