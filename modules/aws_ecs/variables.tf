@@ -146,6 +146,12 @@ variable "rds_subnet_group_name" {
   default     = null
 }
 
+variable "rds_allocated_storage" {
+  type        = number
+  default     = 80
+  description = "Initial allocated storage for the RDS instance in GB. Defaults to 80."
+}
+
 variable "rds_ingress_rules" {
   type = list(
     object({
