@@ -45,11 +45,12 @@ resource "aws_iam_role" "service_role" {
   name               = "${var.deployment_name}-service-role"
   assume_role_policy = data.aws_iam_policy_document.service_role_assume_policy.json
   path               = "/"
+}
 
-  inline_policy {
-    name   = "${var.deployment_name}-service-policy"
-    policy = data.aws_iam_policy_document.service_role_policy.json
-  }
+resource "aws_iam_role_policy" "service_role" {
+  name   = "${var.deployment_name}-service-policy"
+  role   = aws_iam_role.service_role.id
+  policy = data.aws_iam_policy_document.service_role_policy.json
 }
 
 # Execution Role for Fargate
@@ -88,11 +89,13 @@ resource "aws_iam_role" "ec2" {
   name               = "${var.deployment_name}-ec2-iam-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_policy.json
   path               = "/"
+}
 
-  inline_policy {
-    name   = "${var.deployment_name}-ec2-policy"
-    policy = data.aws_iam_policy_document.ec2_policy.json
-  }
+resource "aws_iam_role_policy" "ec2" {
+  count  = var.launch_type == "EC2" ? 1 : 0
+  name   = "${var.deployment_name}-ec2-policy"
+  role   = aws_iam_role.ec2[0].id
+  policy = data.aws_iam_policy_document.ec2_policy.json
 }
 
 data "aws_iam_policy_document" "ec2_assume_policy" {
