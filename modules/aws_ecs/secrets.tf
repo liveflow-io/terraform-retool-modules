@@ -57,3 +57,14 @@ resource "aws_secretsmanager_secret_version" "encryption_key" {
   secret_id     = aws_secretsmanager_secret.encryption_key.id
   secret_string = random_string.encryption_key.result
 }
+
+resource "aws_secretsmanager_secret" "license_key" {
+  name                    = "${var.deployment_name}-license-key"
+  description             = "This is the Retool license key"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "license_key" {
+  secret_id     = aws_secretsmanager_secret.license_key.id
+  secret_string = var.retool_license_key
+}

@@ -104,7 +104,7 @@ resource "aws_ecs_task_definition" "retool_temporal" {
 
   family                   = "${var.deployment_name}-${each.key}"
   task_role_arn            = aws_iam_role.task_role.arn
-  execution_role_arn       = var.launch_type == "FARGATE" ? aws_iam_role.execution_role[0].arn : null
+  execution_role_arn       = aws_iam_role.execution_role.arn
   requires_compatibilities = var.launch_type == "FARGATE" ? ["FARGATE"] : null
   network_mode             = var.launch_type == "FARGATE" ? "awsvpc" : "bridge"
   cpu                      = var.launch_type == "FARGATE" ? each.value["cpu"] : null
@@ -140,6 +140,8 @@ resource "aws_ecs_task_definition" "retool_temporal" {
           }
         ]
 
+        secrets = local.secrets
+
         environment = concat(
           local.environment_variables,
           [
@@ -157,4 +159,7 @@ resource "aws_ecs_task_definition" "retool_temporal" {
       }
     ]
   )
+
+  # New tasks read secrets at start; the policy must exist first.
+  depends_on = [aws_iam_role_policy.execution_role_secrets]
 }

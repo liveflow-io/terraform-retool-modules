@@ -158,7 +158,7 @@ resource "aws_ecs_service" "workflows_worker" {
 resource "aws_ecs_task_definition" "retool_jobs_runner" {
   family                   = "retool-jobs-runner"
   task_role_arn            = aws_iam_role.task_role.arn
-  execution_role_arn       = var.launch_type == "FARGATE" ? aws_iam_role.execution_role[0].arn : null
+  execution_role_arn       = aws_iam_role.execution_role.arn
   requires_compatibilities = var.launch_type == "FARGATE" ? ["FARGATE"] : null
   network_mode             = var.launch_type == "FARGATE" ? "awsvpc" : "bridge"
   cpu                      = var.launch_type == "FARGATE" ? var.ecs_task_resource_map["jobs_runner"]["cpu"] : null
@@ -192,6 +192,8 @@ resource "aws_ecs_task_definition" "retool_jobs_runner" {
           }
         ]
 
+        secrets = local.secrets
+
         environment = concat(
           local.environment_variables,
           [
@@ -204,11 +206,14 @@ resource "aws_ecs_task_definition" "retool_jobs_runner" {
       }
     ]
   )
+
+  # New tasks read secrets at start; the policy must exist first.
+  depends_on = [aws_iam_role_policy.execution_role_secrets]
 }
 resource "aws_ecs_task_definition" "retool" {
   family                   = "retool"
   task_role_arn            = aws_iam_role.task_role.arn
-  execution_role_arn       = var.launch_type == "FARGATE" ? aws_iam_role.execution_role[0].arn : null
+  execution_role_arn       = aws_iam_role.execution_role.arn
   requires_compatibilities = var.launch_type == "FARGATE" ? ["FARGATE"] : null
   network_mode             = var.launch_type == "FARGATE" ? "awsvpc" : "bridge"
   cpu                      = var.launch_type == "FARGATE" ? var.ecs_task_resource_map["main"]["cpu"] : null
@@ -242,6 +247,8 @@ resource "aws_ecs_task_definition" "retool" {
           }
         ]
 
+        secrets = local.secrets
+
         environment = concat(
           local.environment_variables,
           [
@@ -258,13 +265,15 @@ resource "aws_ecs_task_definition" "retool" {
       }
     ]
   )
+
+  depends_on = [aws_iam_role_policy.execution_role_secrets]
 }
 
 resource "aws_ecs_task_definition" "retool_workflows_backend" {
   count                    = var.workflows_enabled ? 1 : 0
   family                   = "retool-workflows-backend"
   task_role_arn            = aws_iam_role.task_role.arn
-  execution_role_arn       = var.launch_type == "FARGATE" ? aws_iam_role.execution_role[0].arn : null
+  execution_role_arn       = aws_iam_role.execution_role.arn
   requires_compatibilities = var.launch_type == "FARGATE" ? ["FARGATE"] : null
   network_mode             = var.launch_type == "FARGATE" ? "awsvpc" : "bridge"
   cpu                      = var.launch_type == "FARGATE" ? var.ecs_task_resource_map["workflows_backend"]["cpu"] : null
@@ -298,6 +307,8 @@ resource "aws_ecs_task_definition" "retool_workflows_backend" {
           }
         ]
 
+        secrets = local.secrets
+
         environment = concat(
           local.environment_variables,
           [
@@ -314,12 +325,14 @@ resource "aws_ecs_task_definition" "retool_workflows_backend" {
       }
     ]
   )
+
+  depends_on = [aws_iam_role_policy.execution_role_secrets]
 }
 resource "aws_ecs_task_definition" "retool_workflows_worker" {
   count                    = var.workflows_enabled ? 1 : 0
   family                   = "retool-workflows-worker"
   task_role_arn            = aws_iam_role.task_role.arn
-  execution_role_arn       = var.launch_type == "FARGATE" ? aws_iam_role.execution_role[0].arn : null
+  execution_role_arn       = aws_iam_role.execution_role.arn
   requires_compatibilities = var.launch_type == "FARGATE" ? ["FARGATE"] : null
   network_mode             = var.launch_type == "FARGATE" ? "awsvpc" : "bridge"
   cpu                      = var.launch_type == "FARGATE" ? var.ecs_task_resource_map["workflows_worker"]["cpu"] : null
@@ -357,6 +370,8 @@ resource "aws_ecs_task_definition" "retool_workflows_worker" {
           }
         ]
 
+        secrets = local.secrets
+
         environment = concat(
           local.environment_variables,
           [
@@ -373,6 +388,8 @@ resource "aws_ecs_task_definition" "retool_workflows_worker" {
       }
     ]
   )
+
+  depends_on = [aws_iam_role_policy.execution_role_secrets]
 }
 
 resource "aws_service_discovery_private_dns_namespace" "retoolsvc" {

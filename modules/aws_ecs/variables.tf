@@ -53,6 +53,7 @@ variable "retool_license_key" {
   type        = string
   description = "Retool license key"
   default     = "EXPIRED-LICENSE-KEY-TRIAL"
+  sensitive   = true
 }
 
 variable "ecs_retool_image" {
@@ -307,7 +308,27 @@ variable "autoscaling_memory_reservation_target" {
 variable "additional_env_vars" {
   type        = list(map(string))
   default     = []
-  description = "Additional environment variables (e.g. BASE_DOMAIN)"
+  description = "Additional environment variables (e.g. BASE_DOMAIN). Values are plain text in the task definition: pass secrets through additional_secrets."
+}
+
+variable "additional_secrets" {
+  type = list(object({
+    name      = string
+    valueFrom = string
+  }))
+  default     = []
+  description = "Additional secrets for the Retool containers, as ECS `secrets` entries. valueFrom must be a full Secrets Manager secret ARN; the execution role gets read access to it."
+
+  validation {
+    condition     = alltrue([for s in var.additional_secrets : can(regex("^arn:aws[a-z-]*:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[^:]+$", s.valueFrom))])
+    error_message = "Each additional_secrets valueFrom must be a full Secrets Manager secret ARN, without a JSON key suffix."
+  }
+}
+
+variable "secrets_kms_key_arns" {
+  type        = list(string)
+  default     = []
+  description = "Customer-managed KMS key ARNs that encrypt additional_secrets. The execution role gets kms:Decrypt on them. Not needed for secrets that use the default aws/secretsmanager key."
 }
 
 variable "additional_temporal_env_vars" {

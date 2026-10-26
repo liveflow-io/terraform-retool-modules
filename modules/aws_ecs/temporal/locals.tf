@@ -27,10 +27,6 @@ locals {
         "value": var.temporal_aurora_username
       },
       {
-        "name": "POSTGRES_PASSWORD",
-        "value": random_string.temporal_aurora_password.result
-      },
-      {
         "name": "DBNAME",
         "value": "temporal"
       },
@@ -48,4 +44,13 @@ locals {
       }
     ]
   )
+
+  # Through the ECS `secrets` block so the task definition holds only the ARN.
+  # Referencing the secret version (not the secret) makes ECS wait for a value.
+  secrets = [
+    {
+      name      = "POSTGRES_PASSWORD"
+      valueFrom = aws_secretsmanager_secret_version.temporal_aurora_password.secret_id
+    },
+  ]
 }

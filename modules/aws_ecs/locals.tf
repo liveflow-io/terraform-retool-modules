@@ -31,22 +31,6 @@ locals {
         "name"  = "POSTGRES_USER",
         "value" = var.rds_username
       },
-      {
-        "name"  = "POSTGRES_PASSWORD",
-        "value" = random_string.rds_password.result
-      },
-      {
-        "name" : "JWT_SECRET",
-        "value" : random_string.jwt_secret.result
-      },
-      {
-        "name" : "ENCRYPTION_KEY",
-        "value" : random_string.encryption_key.result
-      },
-      {
-        "name" : "LICENSE_KEY",
-        "value" : var.retool_license_key
-      },
       # Workflows-specific
       {
         "name": "WORKFLOW_BACKEND_HOST",
@@ -68,6 +52,32 @@ locals {
         "name": "WORKFLOW_TEMPORAL_TLS_ENABLED",
         "value": tostring(var.temporal_cluster_config.tls_enabled)
       }
+    ]
+  )
+
+  # Sensitive values reach the containers through the ECS `secrets` block, so a
+  # task definition only holds secret ARNs. Values in `environment` are readable
+  # by anyone with ecs:DescribeTaskDefinition.
+  # Referencing the secret version (not the secret) makes ECS wait for a value.
+  secrets = concat(
+    var.additional_secrets,
+    [
+      {
+        name      = "POSTGRES_PASSWORD"
+        valueFrom = aws_secretsmanager_secret_version.rds_password.secret_id
+      },
+      {
+        name      = "JWT_SECRET"
+        valueFrom = aws_secretsmanager_secret_version.jwt_secret.secret_id
+      },
+      {
+        name      = "ENCRYPTION_KEY"
+        valueFrom = aws_secretsmanager_secret_version.encryption_key.secret_id
+      },
+      {
+        name      = "LICENSE_KEY"
+        valueFrom = aws_secretsmanager_secret_version.license_key.secret_id
+      },
     ]
   )
 

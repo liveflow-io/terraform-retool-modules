@@ -115,3 +115,21 @@ additional_env_vars = [
     }
 ]
 ```
+
+`additional_env_vars` values are stored in plain text in the ECS task definition, so anyone with `ecs:DescribeTaskDefinition` can read them. Do not put secrets there.
+
+### Secrets
+
+The module stores `POSTGRES_PASSWORD`, `JWT_SECRET`, `ENCRYPTION_KEY` and `LICENSE_KEY` in AWS Secrets Manager. The containers get them through the ECS `secrets` block, so the task definitions contain only the secret ARNs. The Temporal containers get their `POSTGRES_PASSWORD` in the same way.
+
+To add more secrets, create them in Secrets Manager and pass them in `additional_secrets`. `valueFrom` must be the full secret ARN. The module gives the task execution role `secretsmanager:GetSecretValue` on each ARN. If a secret uses a customer-managed KMS key, add the key ARN to `secrets_kms_key_arns`.
+
+```
+additional_secrets = [
+    {
+        name      = "CLIENT_SECRET"
+        valueFrom = aws_secretsmanager_secret.google_client_secret.arn
+    }
+]
+secrets_kms_key_arns = [aws_kms_key.secrets.arn]
+```

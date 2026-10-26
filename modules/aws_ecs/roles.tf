@@ -53,7 +53,8 @@ resource "aws_iam_role_policy" "service_role" {
   policy = data.aws_iam_policy_document.service_role_policy.json
 }
 
-# Execution Role for Fargate
+# Task execution role. ECS uses it to pull secrets into the containers, which
+# both launch types need, so it exists for FARGATE and EC2.
 data "aws_iam_policy_document" "execution_role_assume_policy" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -66,15 +67,44 @@ data "aws_iam_policy_document" "execution_role_assume_policy" {
 }
 
 resource "aws_iam_role" "execution_role" {
-  count              = var.launch_type == "FARGATE" ? 1 : 0
   name               = "${var.deployment_name}-execution-role"
   assume_role_policy = data.aws_iam_policy_document.execution_role_assume_policy.json
 }
 
+moved {
+  from = aws_iam_role.execution_role[0]
+  to   = aws_iam_role.execution_role
+}
+
 resource "aws_iam_role_policy_attachment" "execution_role" {
-  count      = var.launch_type == "FARGATE" ? 1 : 0
-  role       = aws_iam_role.execution_role[0].name
+  role       = aws_iam_role.execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+moved {
+  from = aws_iam_role_policy_attachment.execution_role[0]
+  to   = aws_iam_role_policy_attachment.execution_role
+}
+
+data "aws_iam_policy_document" "execution_role_secrets" {
+  statement {
+    actions   = ["secretsmanager:GetSecretValue"]
+    resources = distinct([for s in local.secrets : s.valueFrom])
+  }
+
+  dynamic "statement" {
+    for_each = length(var.secrets_kms_key_arns) > 0 ? [1] : []
+    content {
+      actions   = ["kms:Decrypt"]
+      resources = var.secrets_kms_key_arns
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "execution_role_secrets" {
+  name   = "${var.deployment_name}-execution-secrets"
+  role   = aws_iam_role.execution_role.id
+  policy = data.aws_iam_policy_document.execution_role_secrets.json
 }
 
 # IAM Role for EC2 instances
